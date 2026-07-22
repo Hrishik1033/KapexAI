@@ -22,7 +22,8 @@ For any newly created or significantly modified business logic files (e.g., API 
 ### Step 4: Run the Test Suite
 Run the appropriate shell command to execute the tests for the modified service (e.g., `pytest services/auth-service` or `npm run test` inside the frontend directory). Capture the results.
 
-### Step 5: Draft the Pull Request Description
+### Step 5: Draft the Pull Request Description and Update AGENTS.md
+First update AGENTS.md so that the context of what's done also get commited.
 Generate a beautifully structured Markdown description for the Pull Request (but don't create any md file for it... just output normally). Format it exactly like this:
 
 """

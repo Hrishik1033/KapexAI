@@ -1,0 +1,60 @@
+generator client {
+  provider             = "prisma-client-py"
+  interface            = "asyncio"
+  recursive_type_depth = 5
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id    String     @id @default(uuid())
+  email String  @unique
+  name  String?
+  created_at DateTime @default(now())
+
+  sessions Session[]
+}
+
+model Session {
+  id     String @id @default(uuid())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  business_idea  String
+
+  status Status @default(ACTIVE)
+
+  created_at DateTime @default(now())
+
+  messages Message[]
+}
+
+model Message {
+  id String @id @default(uuid())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId String 
+
+  role Role
+
+  content Json
+
+  created_at DateTime @default(now())
+
+  @@index([sessionId, created_at])
+}
+
+enum Role {
+  USER
+  ASSISTANT
+}
+
+enum Status {
+  ACTIVE
+  PENDING
+  FAILED
+}

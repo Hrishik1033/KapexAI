@@ -1,0 +1,15 @@
+# ./worker/pyproject.toml
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "worker"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "db-service",  # Linked workspace dependency
+]
+
+[tool.uv.sources]
+db-service = { workspace = true }
