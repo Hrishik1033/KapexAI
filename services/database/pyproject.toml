@@ -10,3 +10,6 @@ requires-python = ">=3.12"
 dependencies = [
     "prisma",
 ]
+
+[tool.setuptools.packages.find]
+include = ["db_service*"]
