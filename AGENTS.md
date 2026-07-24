@@ -23,6 +23,12 @@ Use `uv add --package <pkg> <dep>` (never `pip install`). Example:
 
 `uv run` replaces virtualenv activation — it auto-finds the right environment.
 
+## Testing
+
+- Framework: `pytest` with `pytest-asyncio` for async tests
+- Run backend tests: `cd backend && uv run pytest tests/ -v`
+- Test files: `backend/tests/test_*.py`
+
 ## Database
 
 - ORM: Prisma, schema at `services/database/schema.prisma`
@@ -40,7 +46,7 @@ Custom commands in `.opencode/commands/`:
 
 ## State of project
 
-Early stage — backend and worker have boilerplate main modules using `db_service`. No test runner or linter configured.
+Early stage — backend and worker have boilerplate main modules using `db_service`. Test runner (`pytest`) configured with async support.
 
 ## Boilerplate code
 
