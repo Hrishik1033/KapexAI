@@ -10,8 +10,10 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.110.0",
     "uvicorn>=0.28.0",
-    "db-service",  # Linked workspace dependency
+    "db-service",
+    "redis-service",
 ]
 
 [tool.uv.sources]
 db-service = { workspace = true }
+redis-service = { workspace = true }

@@ -2,7 +2,7 @@
 
 ## Workspace
 
-uv workspace monorepo (Python >=3.12). Packages: `backend/`, `worker/`, `services/database/` (published as `db-service`). `frontend/` is a placeholder (empty).
+uv workspace monorepo (Python >=3.12). Packages: `backend/`, `worker/`, `services/database/` (published as `db-service`), `services/redis-service/` (published as `redis-service`). `frontend/` is a placeholder (empty).
 
 ## Essential commands
 
@@ -29,7 +29,9 @@ Use `uv add --package <pkg> <dep>` (never `pip install`). Example:
 - Run backend tests: `cd backend && uv run pytest tests/ -v`
 - Test files: `backend/tests/test_*.py`
 
-## Database
+## Services
+
+### `db-service` — PostgreSQL (Prisma)
 
 - ORM: Prisma, schema at `services/database/schema.prisma`
 - Provider: PostgreSQL
@@ -37,6 +39,16 @@ Use `uv add --package <pkg> <dep>` (never `pip install`). Example:
 - Shared client: `from db_service import db, connect_db, disconnect_db`
 - After editing `schema.prisma`, run `make generate` then `make migrate`
 - `.prisma/` is gitignored (generated Prisma client)
+
+### `redis-service` — Upstash Redis
+
+- Provider: Upstash (REST-based), no persistent TCP connection
+- Env vars: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
+- Shared client: `from redis_service import redis, connect_redis, disconnect_redis`
+- `connect_redis()` / `disconnect_redis()` are synchronous (REST client)
+- Backend connects Redis in its `lifespan` alongside the DB
+
+Full docs at `docs/services.md`.
 
 ## OpenCode
 
@@ -52,7 +64,8 @@ Early stage — backend and worker have boilerplate main modules using `db_servi
 
 | File | Description |
 |---|---|
-| `backend/main.py` | FastAPI app with `/health` endpoint; connects DB on startup |
+| `backend/main.py` | FastAPI app with `/health` endpoint; connects DB and Redis on startup |
+| `backend/models/models.py` | Pydantic models (e.g. `WaitlistSignup`) |
 | `worker/main.py` | Async event loop worker; connects DB and handles graceful shutdown |
 
 Before running either, ensure the Prisma client is generated: `make generate`.

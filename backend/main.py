@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from db_service import connect_db, disconnect_db, db
+from redis_service import connect_redis, disconnect_redis, redis
 
 from .models.models import WaitlistSignup
 
@@ -11,8 +12,10 @@ from .models.models import WaitlistSignup
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await connect_db()
+    connect_redis()
     yield
     await disconnect_db()
+    disconnect_redis()
 
 
 app = FastAPI(title="KapexAI Backend", lifespan=lifespan)
