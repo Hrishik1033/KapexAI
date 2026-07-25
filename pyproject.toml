@@ -16,4 +16,5 @@ members = [
 dev = [
     "fastapi[standard]>=0.139.2",
     "prisma>=0.15.0",
+    "langchain-mistralai>=1.1.6"
 ]
