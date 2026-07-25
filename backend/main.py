@@ -1,16 +1,11 @@
 from contextlib import asynccontextmanager
-from pydantic import BaseModel, EmailStr
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from db_service import connect_db, disconnect_db, db
 
-
-# Pydantic model for waitlist signup request
-class WaitlistSignup(BaseModel):
-    email: EmailStr
-    name: str | None = None
+from .models.models import WaitlistSignup
 
 
 @asynccontextmanager

@@ -10,7 +10,7 @@ def client() -> AsyncClient:
 
 @pytest.fixture(autouse=True)
 async def lifespan_events():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+    async with client() as c:
         await c.get("/health")
     yield
 
@@ -18,7 +18,7 @@ async def lifespan_events():
 class TestHealthEndpoint:
     @pytest.mark.asyncio
     async def test_health_endpoint_returns_ok(self):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        async with client() as c:
             response = await c.get("/health")
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
@@ -27,7 +27,7 @@ class TestHealthEndpoint:
 class TestWaitlistEndpoint:
     @pytest.mark.asyncio
     async def test_join_waitlist_with_email_only(self):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        async with client() as c:
             response = await c.post("/waitlist", json={"email": "test@example.com"})
         assert response.status_code == 200
         data = response.json()
@@ -36,7 +36,7 @@ class TestWaitlistEndpoint:
 
     @pytest.mark.asyncio
     async def test_join_waitlist_with_email_and_name(self):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        async with client() as c:
             response = await c.post(
                 "/waitlist", json={"email": "test@example.com", "name": "John Doe"}
             )
@@ -47,19 +47,19 @@ class TestWaitlistEndpoint:
 
     @pytest.mark.asyncio
     async def test_join_waitlist_invalid_email(self):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        async with client() as c:
             response = await c.post("/waitlist", json={"email": "not-an-email"})
         assert response.status_code == 422
 
     @pytest.mark.asyncio
     async def test_join_waitlist_missing_email(self):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        async with client() as c:
             response = await c.post("/waitlist", json={"name": "John Doe"})
         assert response.status_code == 422
 
     @pytest.mark.asyncio
     async def test_join_waitlist_empty_email(self):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        async with client() as c:
             response = await c.post("/waitlist", json={"email": ""})
         assert response.status_code == 422
 
@@ -67,7 +67,7 @@ class TestWaitlistEndpoint:
 class TestCORSMiddleware:
     @pytest.mark.asyncio
     async def test_cors_allows_localhost_3000(self):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        async with client() as c:
             response = await c.options(
                 "/waitlist",
                 headers={
@@ -80,7 +80,7 @@ class TestCORSMiddleware:
 
     @pytest.mark.asyncio
     async def test_cors_allows_credentials(self):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        async with client() as c:
             response = await c.options(
                 "/waitlist",
                 headers={
@@ -92,7 +92,7 @@ class TestCORSMiddleware:
 
     @pytest.mark.asyncio
     async def test_cors_allows_all_methods(self):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        async with client() as c:
             response = await c.options(
                 "/waitlist",
                 headers={
@@ -106,7 +106,7 @@ class TestCORSMiddleware:
 
     @pytest.mark.asyncio
     async def test_cors_allows_all_headers(self):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        async with client() as c:
             response = await c.options(
                 "/waitlist",
                 headers={
@@ -121,7 +121,7 @@ class TestCORSMiddleware:
 
     @pytest.mark.asyncio
     async def test_cors_blocks_other_origins(self):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        async with client() as c:
             response = await c.options(
                 "/waitlist",
                 headers={
