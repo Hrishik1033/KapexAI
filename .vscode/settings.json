@@ -5,7 +5,8 @@
     "python.analysis.extraPaths": [
         "${workspaceFolder}/services/database",
         "${workspaceFolder}/backend",
-        "${workspaceFolder}/worker"
+        "${workspaceFolder}/worker",
+        "${workspaceFolder}/services/redis-service"
     ],
     "[prisma]": {
         "editor.formatOnSave": true

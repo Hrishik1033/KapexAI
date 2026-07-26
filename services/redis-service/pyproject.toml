@@ -7,7 +7,7 @@ name = "redis-service"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-    "upstash-redis>=0.15.0",
+    "redis>=5.0.0",
 ]
 
 [tool.setuptools.packages.find]

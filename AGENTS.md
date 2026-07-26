@@ -40,15 +40,16 @@ Use `uv add --package <pkg> <dep>` (never `pip install`). Example:
 - After editing `schema.prisma`, run `make generate` then `make migrate`
 - `.prisma/` is gitignored (generated Prisma client)
 
-### `redis-service` — Upstash Redis
+### `redis-service` — Redis Cloud (redis-py)
 
-- Provider: Upstash (REST-based), no persistent TCP connection
-- Env vars: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
+- Provider: Redis Cloud via `redis-py` (standard TCP Redis, supports pub/sub)
+- Env var: `REDIS_URL` (e.g. `redis://user:pass@host:port`)
 - Shared client: `from redis_service import redis, connect_redis, disconnect_redis`
-- `connect_redis()` / `disconnect_redis()` are synchronous (REST client)
+- `connect_redis()` / `disconnect_redis()` are **async** (`await` them)
 - Backend connects Redis in its `lifespan` alongside the DB
+- Supports pub/sub — used by the WebSocket endpoint for real-time streaming
 
-Full docs at `docs/services.md`.
+Full docs at `docs/services.md` and `docs/queue-and-streaming.md`.
 
 ## OpenCode
 

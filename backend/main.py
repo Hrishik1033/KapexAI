@@ -1,21 +1,25 @@
+import asyncio
+import json
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, status, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from db_service import connect_db, disconnect_db, db
 from redis_service import connect_redis, disconnect_redis, redis
 
-from .models.models import WaitlistSignup
+from .models.models import WaitlistSignup, CreateChatSession
+from .utils.db_utils import get_user
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await connect_db()
-    connect_redis()
+    await connect_redis()
     yield
     await disconnect_db()
-    disconnect_redis()
+    await disconnect_redis()
 
 
 app = FastAPI(title="KapexAI Backend", lifespan=lifespan)
@@ -41,3 +45,48 @@ async def join_waitlist(signup: WaitlistSignup):
     # In a real app, you'd save to database here, e.g.:
     # await db.waitlist.create(data={"email": signup.email, "name": signup.name})
     return {"message": "Successfully joined the waitlist!", "email": signup.email}
+
+
+@app.post("/create_chat_session")
+async def create_chat_session(user_data: CreateChatSession):
+    """Creates new chat session and pushes job to redis"""
+    user = await get_user(user_data.email)
+
+    if not user:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"message": "user not found with given email"},
+        )
+
+    session = await db.session.create(
+        data={
+            "userId": user.id,
+            "business_idea": user_data.business_idea,
+        }
+    )
+
+    job = {"session_id": session.id, "user_input": user_data.business_idea}
+    await redis.lpush("jobs:queue", json.dumps(job))
+
+    return JSONResponse(
+        status_code=status.HTTP_201_CREATED,
+        content={"message": "success", "session_id": session.id},
+    )
+
+
+@app.websocket("/ws/session/{session_id}")
+async def websocket_stream(websocket: WebSocket, session_id: str):
+    await websocket.accept()
+    pubsub = redis.pubsub()
+    await pubsub.subscribe(f"stream:{session_id}")
+
+    async for message in pubsub.listen():
+        if message["type"] == "message":
+            data = json.loads(message["data"])
+            await websocket.send_json(data)
+            if data.get("type") == "end":
+                break
+
+    await pubsub.unsubscribe(f"stream:{session_id}")
+    await pubsub.close()
+    await websocket.close()

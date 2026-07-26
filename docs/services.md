@@ -26,30 +26,30 @@ Connection string via `DATABASE_URL` env var. After schema changes, run `make ge
 
 ---
 
-## `redis-service` — Upstash Redis
+## `redis-service` — Redis Cloud (redis-py)
 
 **Package:** `services/redis-service/` (published as `redis-service`)
 
-Provides a singleton Upstash Redis REST client. All calls are synchronous (REST-based, no persistent TCP connection).
+Provides a singleton `redis.asyncio.Redis` client for Redis Cloud. All calls are async (standard TCP Redis, supports pub/sub).
 
 | Export | Type | Description |
 |---|---|---|
-| `redis` | `Redis` instance | Redis client — use for commands (e.g. `redis.get("key")`) |
-| `connect_redis()` | `sync` | Verifies connectivity via `ping()`. |
-| `disconnect_redis()` | `sync` | No-op (Upstash has no persistent connection). |
+| `redis` | `aioredis.Redis` instance | Redis client — use for commands (e.g. `await redis.get("key")`) |
+| `connect_redis()` | `async` | Verifies connectivity via `ping()`. |
+| `disconnect_redis()` | `async` | Closes the connection pool. |
 
 Usage:
 
 ```python
 from redis_service import redis, connect_redis, disconnect_redis
 
-connect_redis()
-redis.set("key", "value")
-val = redis.get("key")
-disconnect_redis()
+await connect_redis()
+await redis.set("key", "value")
+val = await redis.get("key")
+await disconnect_redis()
 ```
 
-Requires env vars `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+Connection string via `REDIS_URL` env var (e.g. `redis://user:pass@host:port`).
 
 ---
 
@@ -60,8 +60,8 @@ Requires env vars `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
 Both services are connected on startup and disconnected on shutdown via FastAPI's `lifespan`:
 
 ```
-startup  → await connect_db() → connect_redis()
-shutdown → await disconnect_db() → disconnect_redis()
+startup  → await connect_db() → await connect_redis()
+shutdown → await disconnect_db() → await disconnect_redis()
 ```
 
 ### Worker
