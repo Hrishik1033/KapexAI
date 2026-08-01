@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -11,6 +12,7 @@ from worker.agents.guardrail_agent import GuardrailAgent
 from worker.agents.questionnaire_agent import QuestionnaireAgent
 from worker.agents.report_agent import ReportAgent
 from worker.agents.research_agent import ResearchAgent
+from worker.helpers.persistence import add_message
 
 
 class State(BaseModel):
@@ -29,8 +31,8 @@ report_agent = ReportAgent()
 guardrail_agent = GuardrailAgent()
 
 
-def orchestrator(state: State) -> State:
-    answers = questionnaire_agent.ask()
+async def orchestrator(state: State) -> State:
+    answers = await questionnaire_agent.ask()
     state.user_name = answers["user_name"]
     state.business_about = answers["business_about"]
     state.business_location = answers["business_location"]
@@ -38,10 +40,28 @@ def orchestrator(state: State) -> State:
 
     result = research_agent.run(answers)
     state.research_result = result
+    await add_message(
+        questionnaire_agent.session_id,
+        "ASSISTANT",
+        "RESEARCH",
+        {"type": "research", "content": result},
+    )
 
     state.report = report_agent.run(result)
+    await add_message(
+        questionnaire_agent.session_id,
+        "ASSISTANT",
+        "REPORT",
+        {"type": "report", "content": state.report},
+    )
 
     state.guardrail = guardrail_agent.run(state.report)
+    await add_message(
+        questionnaire_agent.session_id,
+        "ASSISTANT",
+        "GUARDRAIL",
+        {"type": "guardrail", "content": state.guardrail},
+    )
     return state
 
 
@@ -53,18 +73,23 @@ def build_graph() -> CompiledStateGraph:
     return graph.compile()
 
 
-def run_cli():
-    graph = build_graph()
+async def run_cli():
+    from db_service import connect_db, disconnect_db
 
-    print("Agent ready. Type 'quit' at any prompt to exit.\n")
-    result = graph.invoke(State())
-    print("\n" + "=" * 60)
-    print("STRUCTURED REPORT")
-    print("=" * 60)
-    print(result["report"])
-    print("=" * 60)
-    print("Guardrail:", result["guardrail"]["message"])
+    await connect_db()
+    try:
+        graph = build_graph()
+        print("Agent ready. Type 'quit' at any prompt to exit.\n")
+        result = await graph.ainvoke(State())
+        print("\n" + "=" * 60)
+        print("STRUCTURED REPORT")
+        print("=" * 60)
+        print(result["report"])
+        print("=" * 60)
+        print("Guardrail:", result["guardrail"]["message"])
+    finally:
+        await disconnect_db()
 
 
 if __name__ == "__main__":
-    run_cli()
+    asyncio.run(run_cli())
