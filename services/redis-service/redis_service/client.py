@@ -1,17 +1,18 @@
 import os
 
-from upstash_redis import Redis
+import redis.asyncio as aioredis
 
-redis = Redis(
-    url=os.environ["UPSTASH_REDIS_REST_URL"],
-    token=os.environ["UPSTASH_REDIS_REST_TOKEN"],
+redis = aioredis.from_url(
+    os.environ.get("REDIS_URL", "redis://localhost:6379/0"),
+    decode_responses=True,
 )
 
 
-def connect_redis():
-    redis.ping()
+async def connect_redis():
+    await redis.ping()
     print("Connected to Redis")
 
 
-def disconnect_redis():
-    print("Redis client closed")
+async def disconnect_redis():
+    await redis.aclose()
+    print("Disconnected from Redis")
