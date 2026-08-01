@@ -1,10 +1,13 @@
+import json
 from pathlib import Path
 from uuid import uuid4
 
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+from redis_service import push_message
 
+from worker.helpers.events import publish_event
 from worker.helpers.persistence import (
     add_message,
     create_session,
@@ -17,6 +20,7 @@ from worker.helpers.persistence import (
 from worker.prompts.questionnaire import QUESTIONS
 
 NAME_PROMPT = "What is your name?"
+USER_QUEUE = "user_messages"
 
 
 class QuestionnaireAgent:
@@ -48,6 +52,8 @@ class QuestionnaireAgent:
             session = await create_session(self.user_id)
             self.session_id = session.id
 
+        await publish_event("session_started", self.session_id, email=self.email)
+
         prompts = [("user_name", NAME_PROMPT)] + QUESTIONS
         for key, question in prompts:
             if key in self.answers:
@@ -66,6 +72,21 @@ class QuestionnaireAgent:
             )
             if key == "user_name":
                 await update_user_name(self.user_id, answer)
+
+            await push_message(
+                USER_QUEUE,
+                json.dumps(
+                    {
+                        "session_id": self.session_id,
+                        "key": key,
+                        "content": answer,
+                        "agent": "QUESTIONNAIRE",
+                    }
+                ),
+            )
+            await publish_event("answer_received", self.session_id, key=key, content=answer)
+
+        await publish_event("questionnaire_complete", self.session_id, answers=self.answers)
 
         if "business_about" in self.answers:
             await update_session_business_idea(self.session_id, self.answers["business_about"])

@@ -1,4 +1,5 @@
 import asyncio
+import json
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -7,11 +8,13 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, Field
+from redis_service import push_message
 
 from worker.agents.guardrail_agent import GuardrailAgent
-from worker.agents.questionnaire_agent import QuestionnaireAgent
+from worker.agents.questionnaire_agent import QuestionnaireAgent, USER_QUEUE
 from worker.agents.report_agent import ReportAgent
 from worker.agents.research_agent import ResearchAgent
+from worker.helpers.events import publish_event
 from worker.helpers.persistence import add_message
 
 
@@ -38,29 +41,50 @@ async def orchestrator(state: State) -> State:
     state.business_location = answers["business_location"]
     state.business_vision = answers["business_vision"]
 
+    session_id = questionnaire_agent.session_id
+
     result = research_agent.run(answers)
     state.research_result = result
     await add_message(
-        questionnaire_agent.session_id,
+        session_id,
         "ASSISTANT",
         "RESEARCH",
         {"type": "research", "content": result},
     )
+    await publish_event("research_complete", session_id, summary=result)
 
     state.report = report_agent.run(result)
     await add_message(
-        questionnaire_agent.session_id,
+        session_id,
         "ASSISTANT",
         "REPORT",
         {"type": "report", "content": state.report},
     )
+    await push_message(
+        USER_QUEUE,
+        json.dumps(
+            {
+                "session_id": session_id,
+                "key": "report",
+                "content": state.report,
+                "agent": "REPORT",
+            }
+        ),
+    )
+    await publish_event("report_complete", session_id, report=state.report)
 
     state.guardrail = guardrail_agent.run(state.report)
     await add_message(
-        questionnaire_agent.session_id,
+        session_id,
         "ASSISTANT",
         "GUARDRAIL",
         {"type": "guardrail", "content": state.guardrail},
+    )
+    await publish_event(
+        "guardrail_complete",
+        session_id,
+        report=state.report,
+        guardrail=state.guardrail,
     )
     return state
 
